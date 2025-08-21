@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Real-Time Inventory Tracker</title>
+		<style>
+			* {
+    			margin: 0;
+    			padding: 0;
+    			box-sizing: border-box;
+			}
+
+			body {
+    			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    			min-height: 100vh;
+    			color: #333;
+			}
+
+			.container {
+    			max-width: 1200px;
+    			margin: 0 auto;
+    			padding: 20px;
+			}
+
+			.header {
+    			text-align: center;
+    			margin-bottom: 2rem;
+    			color: white;
+			}
+
+			.header h1 {
+    			font-size: 2.5rem;
+    			margin-bottom: 0.5rem;
+			}
+
+			.card {
+    			background: white;
+    			border-radius: 15px;
+    			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    			padding: 2rem;
+    			margin-bottom: 2rem;
+			}
+
+			.status {
+    			padding: 10px 15px;
+    			border-radius: 25px;
+    			font-weight: 600;
+    			text-align: center;
+    			margin-bottom: 2rem;
+			}
+
+			.status.connected {
+    			background: #d4edda;
+    			color: #155724;
+    			border: 1px solid #c3e6cb;
+			}
+
+			.status.disconnected {
+    			background: #f8d7da;
+    			color: #721c24;
+    			border: 1px solid #f5c6cb;
+			}
+
+			.form-section h2 {
+    			margin-bottom: 1rem;
+    			color: #333;
+			}
+
+			.form-group {
+    			display: flex;
+    			gap: 1rem;
+    			margin-bottom: 1rem;
+			}
+
+			input[type="text"], input[type="number"] {
+    			flex: 1;
+    			padding: 12px;
+    			border: 2px solid #e1e5e9;
+    			border-radius: 8px;
+    			font-size: 1rem;
+    			transition: border-color 0.3s;
+			}
+
+			input[type="text"]:focus, input[type="number"]:focus {
+    			outline: none;
+    			border-color: #667eea;
+			}
+
+			.btn {
+    			padding: 12px 24px;
+    			background: #667eea;
+    			color: white;
+    			border: none;
+    			border-radius: 8px;
+    			cursor: pointer;
+    			font-size: 1rem;
+    			font-weight: 600;
+    			transition: all 0.3s;
+			}
+
+			.btn:hover {
+    			background: #5a67d8;
+    			transform: translateY(-2px);
+			}
+
+			.btn-danger {
+    			background: #e53e3e;
+			}
+
+			.btn-danger:hover {
+    			background: #c53030;
+			}
+
+			.btn-small {
+    			padding: 8px 16px;
+    			font-size: 0.875rem;
+			}
+
+			.inventory-list h2 {
+    			margin-bottom: 1rem;
+    			color: #333;
+			}
+
+			.inventory-item {
+    			display: flex;
+    			justify-content: space-between;
+    			align-items: center;
+    			padding: 1rem;
+    			border: 1px solid #e1e5e9;
+    			border-radius: 8px;
+    			margin-bottom: 0.5rem;
+    			transition: all 0.3s;
+			}
+
+			.inventory-item:hover {
+    			border-color: #667eea;
+    			transform: translateY(-1px);
+    			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+			}
+
+			.inventory-item.updating {
+    			opacity: 0.7;
+    			pointer-events: none;
+			}
+
+			.item-info {
+    			flex: 1;
+			}
+
+			.item-name {
+    			font-weight: 600;
+    			font-size: 1.1rem;
+    			margin-bottom: 0.25rem;
+			}
+
+			.item-meta {
+    			color: #666;
+    			font-size: 0.875rem;
+			}
+
+			.item-actions {
+    			display: flex;
+    			gap: 1rem;
+    			align-items: center;
+			}
+
+			.quantity-input {
+    			width: 80px;
+    			padding: 8px;
+    			border: 2px solid #e1e5e9;
+    			border-radius: 4px;
+    			text-align: center;
+    			font-weight: 600;
+			}
+
+			.loading, .empty-state {
+    			text-align: center;
+    			padding: 3rem;
+    			color: #666;
+			}
+
+			.empty-state h3 {
+    			margin-bottom: 0.5rem;
+    			color: #333;
+			}
+		</style>
+
+		<!-- Socket.IO Client Library -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="header">
+				<h1>📦 Real-Time Inventory Tracker</h1>
+				<p>Add, update, and track inventory items in real-time</p>
+			</div>
+			<div class="card">
+				<div id="connection-status" class="status disconnected">
+					🔴 Disconnected from server
+				</div>
+				<div class="form-section">
+					<h2>Add New Item</h2>
+					<form id="add-item-form">
+						<div class="form-group">
+							<input type="text" id="item-name" placeholder="Item name" required>
+							<input type="number" id="item-quantity" placeholder="Quantity" min="0" required>
+							<button type="submit" class="btn">Add Item</button>
+						</div>
+					</form>
+				</div>
+				<div class="inventory-list">
+					<h2>Inventory Items</h2>
+					<div id="inventory-container">
+						<div class="loading">Loading inventory...</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script src="static/index.js"></script>
+	</body>
+</html>
